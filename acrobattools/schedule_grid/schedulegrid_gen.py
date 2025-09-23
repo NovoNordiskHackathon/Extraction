@@ -3,7 +3,8 @@ import re
 import pandas as pd
 from pathlib import Path
 
-ecrf_file = Path("texttablestructured_ecrf.json")
+# Correct path to the JSON
+ecrf_file = Path("/home/ibab/Desktop/Novo_Nordisk/Extraction/acrobattools/texttablestructured_ecrf.json")
 with open(ecrf_file, "r", encoding="utf-8") as f:
     ecrf = json.load(f)
 
@@ -18,18 +19,17 @@ for idx, el in enumerate(elements):
     if visit_matches:
         # Look below visits line (forward scan) for Form Label
         label = ""
-        for offset in range(1, 5):  # look up to 4 lines after visits
+        for offset in range(1, 5):
             next_idx = idx + offset
             if next_idx < len(elements):
                 next_txt = elements[next_idx].get("Text", "").strip()
-                # Condition for label: skip lines like keys or empty; expect descriptive text, avoid form name bracket pattern here
                 if next_txt and not re.match(r"\[.*\]", next_txt.lower()) and "key:" not in next_txt.lower() and len(next_txt) > 5:
                     label = next_txt
                     break
 
         # Look below visits line (forward scan) for Form Name
         form_name = ""
-        for offset in range(1, 6):  # up to 5 lines after visits
+        for offset in range(1, 6):
             next_idx = idx + offset
             if next_idx < len(elements):
                 next_txt = elements[next_idx].get("Text", "").strip()
@@ -44,7 +44,7 @@ for idx, el in enumerate(elements):
                 "Visits": ", ".join(visit_matches)
             })
 
-# Remove duplicates and short labels
+# Convert to dataframe, clean, and save
 forms_df = pd.DataFrame(forms)
 forms_df = forms_df.drop_duplicates(subset=["Form Label", "Form Name"])
 forms_df = forms_df[forms_df["Form Label"].str.len() > 5]
