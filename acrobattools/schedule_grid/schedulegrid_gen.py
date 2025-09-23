@@ -49,5 +49,5 @@ forms_df = pd.DataFrame(forms)
 forms_df = forms_df.drop_duplicates(subset=["Form Label", "Form Name"])
 forms_df = forms_df[forms_df["Form Label"].str.len() > 5]
 
-forms_df.to_csv("ecrf_formlabel_formname_visits_below.csv", index=False)
+forms_df.to_csv("home/ibab/Desktop/Novo_Nordisk/Extraction/acrobattools/schedule_grid/ecrf_formlabel_formname_visits_below.csv", index=False)
 print(forms_df)
