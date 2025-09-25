@@ -1,68 +1,111 @@
-# Get the samples from https://github.com/adobe/pdfservices-python-sdk-samples
-# Run the sample:
-# python src/extractpdf/extract_text_table_info_from_pdf.py
-import os
-import logging
-from adobe.pdfservices.operation.auth.service_principal_credentials import ServicePrincipalCredentials
-from adobe.pdfservices.operation.exception.exceptions import ServiceApiException, ServiceUsageException, SdkException
-from adobe.pdfservices.operation.io.cloud_asset import CloudAsset
-from adobe.pdfservices.operation.io.stream_asset import StreamAsset
-from adobe.pdfservices.operation.pdf_services import PDFServices
-from adobe.pdfservices.operation.pdf_services_media_type import PDFServicesMediaType
-from adobe.pdfservices.operation.pdfjobs.jobs.extract_pdf_job import ExtractPDFJob
-from adobe.pdfservices.operation.pdfjobs.params.extract_pdf.extract_element_type import ExtractElementType
-from adobe.pdfservices.operation.pdfjobs.params.extract_pdf.extract_pdf_params import ExtractPDFParams
-from adobe.pdfservices.operation.pdfjobs.params.extract_pdf.extract_renditions_element_type import \
-    ExtractRenditionsElementType
-from adobe.pdfservices.operation.pdfjobs.result.extract_pdf_result import ExtractPDFResult
+import json
+import pandas as pd
+
+json_file = "structuring_protocol_json/texttablestructured_protocol.json"
 
 
-# Initialize the logger
-logging.basicConfig(level=logging.INFO)
+def extract_schedule_table(json_file):
+    with open(json_file, 'r', encoding='utf-8') as f:
+        data = json.load(f)
 
-class ExtractTextTableInfoFromPDF:
-    def __init__(self):
+    # Look for structured table data (lists of dicts), not just keywords in strings
+    def find_table_structures(obj, path=""):
+        tables = []
+
+        if isinstance(obj, dict):
+            for key, value in obj.items():
+                current_path = f"{path}.{key}" if path else key
+
+                # Only check list structures that could be tables
+                if isinstance(value, list) and len(value) > 1:
+                    # Check if it's a table (list of dictionaries)
+                    if all(isinstance(item, dict) for item in value if item):
+                        tables.append({
+                            'path': current_path,
+                            'data': value,
+                            'row_count': len(value)
+                        })
+
+                # Recurse into nested structures
+                tables.extend(find_table_structures(value, current_path))
+
+        elif isinstance(obj, list):
+            for i, item in enumerate(obj):
+                current_path = f"{path}[{i}]" if path else f"[{i}]"
+                tables.extend(find_table_structures(item, current_path))
+
+        return tables
+
+    # Find all table structures
+    tables = find_table_structures(data)
+
+    if not tables:
+        print("No table structures found in JSON.")
+        return None
+
+    print(f"Found {len(tables)} potential table(s):")
+
+    # Try to convert each table to DataFrame and pick the best one
+    best_table = None
+    best_score = 0
+
+    for i, table_info in enumerate(tables):
         try:
-            file = open('/home/ibab/Desktop/NovoNordisk/Mock CRF.pdf', 'rb')
-            input_stream = file.read()
-            file.close()
+            df = pd.DataFrame(table_info['data'])
 
-            # Initial setup, create credentials instance
-            credentials = ServicePrincipalCredentials(
-                client_id=os.getenv('PDF_SERVICES_CLIENT_ID'),
-                client_secret=os.getenv('PDF_SERVICES_CLIENT_SECRET')
-            )
+            if df.empty:
+                continue
 
-            # Creates a PDF Services instance
-            pdf_services = PDFServices(credentials=credentials)
+            # Calculate schedule likelihood score
+            score = 0
+            columns_text = ' '.join([str(col).lower() for col in df.columns])
 
-            # Creates an asset(s) from source file(s) and upload
-            input_asset = pdf_services.upload(input_stream=input_stream, mime_type=PDFServicesMediaType.PDF)
+            # Check for schedule-related column names
+            schedule_indicators = ['visit', 'week', 'procedure', 'form', 'day', 'assessment', 'activity']
+            score += sum(2 for indicator in schedule_indicators if indicator in columns_text)
 
-            # Create parameters for the job
-            extract_pdf_params = ExtractPDFParams(
-                elements_to_extract=[ExtractElementType.TEXT, ExtractElementType.TABLES],
-            )
+            # Check data content for schedule keywords
+            data_text = ' '.join([str(val).lower() for val in df.values.flatten()[:100]])  # First 100 values
+            content_indicators = ['screening', 'randomisation', 'treatment', 'v1', 'v2']
+            score += sum(1 for indicator in content_indicators if indicator in data_text)
 
-            # Creates a new job instance
-            extract_pdf_job = ExtractPDFJob(input_asset=input_asset, extract_pdf_params=extract_pdf_params)
+            # Prefer larger tables
+            score += len(df) * 0.1
 
-            # Submit the job and gets the job result
-            location = pdf_services.submit(extract_pdf_job)
-            pdf_services_response = pdf_services.get_job_result(location, ExtractPDFResult)
+            print(f"{i + 1}. Path: {table_info['path']}")
+            print(f"   Shape: {df.shape}")
+            print(f"   Columns: {list(df.columns)[:5]}")  # Show first 5 columns
+            print(f"   Score: {score:.1f}")
+            print()
 
-            # Get content from the resulting asset(s)
-            result_asset: CloudAsset = pdf_services_response.get_result().get_resource()
-            stream_asset: StreamAsset = pdf_services.get_content(result_asset)
+            if score > best_score:
+                best_score = score
+                best_table = df
 
-            # Creates an output stream and copy stream asset's content to it
-            output_file_path = 'ExtractTextTableInfoFromPDF.zip'
-            with open(output_file_path, "wb") as file:
-                file.write(stream_asset.get_input_stream())
+        except Exception as e:
+            print(f"{i + 1}. Path: {table_info['path']} - Error: {e}")
 
-        except (ServiceApiException, ServiceUsageException, SdkException) as e:
-            logging.exception(f'Exception encountered while executing operation: {e}')
+    if best_table is not None:
+        print(f"🏆 Selected best table (score: {best_score:.1f})")
+        print(f"Shape: {best_table.shape}")
+        print("\n📋 Schedule of Activities DataFrame:")
+        print(best_table.head(10))  # Show first 10 rows
+        return best_table
+    else:
+        print("No suitable table found for conversion to DataFrame.")
+        return None
 
 
-if __name__ == "__main__":
-    ExtractTextTableInfoFromPDF()
+# Extract the schedule
+schedule_df = extract_schedule_table(json_file)
+
+if schedule_df is not None:
+    print(f"\n✅ SUCCESS! Extracted Schedule of Activities")
+    print(f"📊 Shape: {schedule_df.shape}")
+    print(f"📋 Columns: {list(schedule_df.columns)}")
+
+    # Optional: Save to Excel
+    # schedule_df.to_excel('schedule_of_activities.xlsx', index=False)
+    # print("💾 Saved to schedule_of_activities.xlsx")
+else:
+    print("❌ Could not extract Schedule of Activities")

@@ -132,8 +132,8 @@ def parse_hierarchy(elements):
 
 # --- Usage Example ---
 if __name__ == "__main__":
-    input_file = "/Users/sharmishtaganesh/Desktop/Hackathon_docs/Extraction/acrobattools/texttablestructured_protocol.json"
-    output_file = "/Users/sharmishtaganesh/Desktop/Hackathon_docs/Extraction/acrobattools/structuring_protocol_json/hierarchical_output_final.json"
+    input_file = "texttablestructured_protocol3.json"
+    output_file = "hierarchical_output_final3.json"
 
     with open(input_file, 'r', encoding='utf-8') as f:
         data = json.load(f)

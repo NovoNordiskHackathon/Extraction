@@ -2,7 +2,7 @@ import pandas as pd
 from pathlib import Path
 
 # Load extracted schedule grid mapping (CSV from previous processing)
-schedule_csv = Path("ecrf_formlabel_formname_visits_below.csv")
+schedule_csv = Path("schedule_grid/ecrf_formlabel_formname_visits_below.csv")
 df = pd.read_csv(schedule_csv)
 
 # Example: Filter forms that are triggered (have at least one visit with valid trigger)
