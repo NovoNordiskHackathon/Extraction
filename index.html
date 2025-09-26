@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PTD Generator</title>
+  <link rel="stylesheet" href="styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Header -->
+  <header class="site-header">
+    <div class="container header-container">
+      <h1 class="logo">PTD Generator</h1>
+      <nav>
+
+      </nav>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="container">
+      <h2>Generate Your PTD File Easily</h2>
+      <p>Upload your Protocol and CRF documents to automatically build your Protocol Translation Document(PTD).</p>
+    </div>
+  </section>
+
+  <!-- Main Section -->
+  <main class="container">
+    <div class="upload-section">
+      <h3>Upload Documents</h3>
+      <label>
+        Protocol Document:
+        <input type="file" id="protocolFile">
+      </label>
+      <label>
+        CRF Document:
+        <input type="file" id="crfFile">
+      </label>
+      <button onclick="generatePTD()">Generate PTD</button>
+    </div>
+
+    <div id="outputSection" class="output-section hidden">
+      <h4>Your PTD file has been generated successfully.</h4>
+      <a id="downloadLink" href="#" download="PTD_Template.xlsx">Download PTD</a>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <p>© 2025 PTD Generator/p>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
