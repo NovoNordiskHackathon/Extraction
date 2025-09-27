@@ -1,0 +1,13 @@
+Form Label,Form Name,Visits
+Collection of Samples for Laboratory (Lab_1),[LAB_SMPL_TKN] – Non-repeating form,"V1, V4, V5, V6, V7, V10, V12, V14, V16, V18, V19A, V21"
+Collection of Samples for Laboratory (Lab_2),[LAB_SMPL_TKN_1] – Non-repeating form,"V2, V8, V19"
+Collection of Samples for Laboratory (Biosamples),[LAB_SMPL_TKN_2] – Non-repeating form,"V2, V5, V8, V16, V19"
+Contraception - (Contraception),[CONTRACEPTION_BASE] - Non-repeating,V1
+Contraception - (Contraception),[CONTRACEPTION_FU] - Non-repeating,"V2, V4, V5, V6, V7, V8, V10, V12, V14, V16, V18, V19, V19A, V20"
+C-SSRS Baseline (C-SSRS Baseline),[CSSRS_BASELINE] - Non-repeating,V1
+C-SSRS Since Last Visit (C-SSRS Since Last Visit),[CSSRS_SLV] - Non-repeating,"V6, V8, V12, V16, V19, V19A"
+Evaluation of Antihypertensive and Lipid-Lowering Treatment (Eval AH And LL Treat),[EVALUATION_2],V19
+Hand Grip Test (Hand Grip),[HAND_GRIP] -Non repeating form,"V2, V8, V19"
+MRI Scan Consent (MRI Consent),[MRI_CONSENT] Non-repeating,V1
+Patient Health Questionnaire - PHQ-9 (PHQ-9),[PHQ9] - Non-repeating,"V1, V6, V8, V12, V16, V19, V19A"
+Weight History – (Weight Hx),[WEIGHT_HIST] - Non-repeating,V1

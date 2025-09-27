@@ -118,7 +118,7 @@ def create_schedule_from_json_hierarchy(json_path: str, output_excel_path: str):
 # --- RUN ---
 if __name__ == "__main__":
     try:
-        json_file_path = "hierarchical_1234_ Technical_Design_Sample_eCRF_Req.json"
+        json_file_path = "../hierarchical_1234_ Technical_Design_Sample_eCRF_Req.json"
         output_file_path = "50_trial_2.xlsx"
 
         if Path(json_file_path).exists():

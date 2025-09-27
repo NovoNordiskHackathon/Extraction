@@ -1,7 +1,7 @@
 import json
 import pandas as pd
 
-json_file = "structuring_protocol_json/texttablestructured_protocol.json"
+json_file = "../structuring_protocol_json/texttablestructured_protocol.json"
 
 
 def extract_schedule_table(json_file):
