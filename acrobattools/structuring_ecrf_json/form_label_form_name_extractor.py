@@ -34,7 +34,7 @@ def deep_search_visits(node):
 
 
 def deep_search_form_names(node, collected_forms, current_label=None):
-    """Recursively search all descendants for form names (bracketed text)."""
+    """Recursively search all descendants for form names (bracketed text with ALL CAPS)."""
     if not isinstance(node, dict):
         return
 
@@ -42,24 +42,27 @@ def deep_search_form_names(node, collected_forms, current_label=None):
     text = get_text(node)
 
     # Check if this is a potential form label (H2 without brackets)
-    if name.startswith("H2") and not re.search(r'\[([A-Za-z0-9_\-]+)\]', text):
+    if name.startswith("H2") and not re.search(r'\[([A-Z0-9_\-]+)\]', text):
         current_label = text
 
-    # Check if this contains a form name (bracketed text)
-    form_name_match = re.search(r'\[([A-Za-z0-9_\-]+)\]', text)
+    # Check if this contains a form name (bracketed text with ALL CAPS requirement)
+    form_name_match = re.search(r'\[([A-Z0-9_\-]+)\]', text)
     if form_name_match:
-        # Found a form name, collect all visits from the entire subtree
-        visits = deep_search_visits(node)
-        visits_str = ", ".join(sorted(visits, key=lambda x: (
-            int(re.search(r'\d+', x).group()) if re.search(r'\d+', x) else 9999,
-            x
-        )))
+        # Additional check: ensure the content inside brackets is ALL CAPS
+        bracketed_content = form_name_match.group(1)
+        if bracketed_content.isupper():  # Only accept if ALL CAPS
+            # Found a valid form name, collect all visits from the entire subtree
+            visits = deep_search_visits(node)
+            visits_str = ", ".join(sorted(visits, key=lambda x: (
+                int(re.search(r'\d+', x).group()) if re.search(r'\d+', x) else 9999,
+                x
+            )))
 
-        collected_forms.append({
-            "Form Label": current_label if current_label else "",
-            "Form Name": text,
-            "Visits": visits_str
-        })
+            collected_forms.append({
+                "Form Label": current_label if current_label else "",
+                "Form Name": text,
+                "Visits": visits_str
+            })
 
     # Continue searching in all children
     for child in node.get("children", []):
@@ -131,23 +134,26 @@ def deep_search_with_context(node, parent_visits=None):
     # Collect visits from current node
     current_visits.update(extract_visit_strings(text))
 
-    # Check if this is a form name
-    form_name_match = re.search(r'\[([A-Za-z0-9_\-]+)\]', text)
+    # Check if this is a form name (with ALL CAPS requirement)
+    form_name_match = re.search(r'\[([A-Z0-9_\-]+)\]', text)
     if form_name_match:
-        # Collect all visits from this subtree
-        subtree_visits = deep_search_visits(node)
-        all_visits = current_visits.union(subtree_visits)
+        # Additional check: ensure the content inside brackets is ALL CAPS
+        bracketed_content = form_name_match.group(1)
+        if bracketed_content.isupper():  # Only accept if ALL CAPS
+            # Collect all visits from this subtree
+            subtree_visits = deep_search_visits(node)
+            all_visits = current_visits.union(subtree_visits)
 
-        visits_str = ", ".join(sorted(all_visits, key=lambda x: (
-            int(re.search(r'\d+', x).group()) if re.search(r'\d+', x) else 9999,
-            x
-        )))
+            visits_str = ", ".join(sorted(all_visits, key=lambda x: (
+                int(re.search(r'\d+', x).group()) if re.search(r'\d+', x) else 9999,
+                x
+            )))
 
-        forms.append({
-            "Form Name": text,
-            "Visits": visits_str,
-            "Node": node  # Keep reference for label assignment
-        })
+            forms.append({
+                "Form Name": text,
+                "Visits": visits_str,
+                "Node": node  # Keep reference for label assignment
+            })
 
     # Recursively process children
     for child in node.get("children", []):
@@ -187,7 +193,8 @@ def extract_forms_with_full_context(data):
                             prev_child = children[j]
                             prev_name = prev_child.get("name", "")
                             prev_text = get_text(prev_child)
-                            if prev_name.startswith("H2") and not re.search(r'\[([A-Za-z0-9_\-]+)\]', prev_text):
+                            # Updated regex to only match ALL CAPS content
+                            if prev_name.startswith("H2") and not re.search(r'\[([A-Z0-9_\-]+)\]', prev_text):
                                 return prev_text
                         return None
                     else:
