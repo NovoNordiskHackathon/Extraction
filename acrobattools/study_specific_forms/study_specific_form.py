@@ -1,3 +1,5 @@
+#1st part(to get the template)
+
 # import pandas as pd
 #
 # # Ensure every column has exactly 4 rows (pad with None if fewer)
@@ -52,6 +54,13 @@
 ##################################################################################################################
 
 
+#2nd part (to populate the values in template)
+
+
+
+######################################################################################################
+
+
 import json
 import csv
 import re
@@ -59,454 +68,700 @@ import pandas as pd
 
 
 def get_text(node):
-    """Extract text from a node safely."""
+    """
+    Extract text from a node safely and recursively.
+    This can find text nested inside other nodes (e.g., P -> StyleSpan).
+    """
     if not isinstance(node, dict):
         return ""
-    return (node.get("text") or "").strip()
-
-
-def deep_search_for_forms(node):
-    """
-    Recursively search through all descendant nodes to find form names
-    (identified by bracketed text). It returns a list of dictionaries,
-    each containing the form's name and a reference to its node.
-    """
-    if not isinstance(node, dict):
-        return []
-
-    found_forms = []
-    text = get_text(node)
-
-    # Check if the current node's text contains a form name pattern like [FORM_ID]
-    form_name_match = re.search(r'\[([A-Za-z0-9_\-]+)\]', text)
-    if form_name_match:
-        found_forms.append({
-            "Form Name": text,
-            "Node": node  # Keep a reference to the node for label assignment
-        })
-
-    # Continue the search recursively in all children nodes
+    text = (node.get("text") or "").strip()
+    if text:
+        return text
     for child in node.get("children", []):
-        child_forms = deep_search_for_forms(child)
-        found_forms.extend(child_forms)
+        text = get_text(child)
+        if text:
+            return text
+    return ""
 
-    return found_forms
+
+def is_valid_form_name(text):
+    """Check if text is a valid form name, allowing for numbers in the name."""
+    if not text:
+        return False
+    form_name_pattern = re.compile(
+        r'(?:'
+        r'\[([A-Z0-9_\-]{3,})\]'
+        r'|'
+        r'.*\b(Non-)?[Rr]epeating\b.*'
+        r')',
+        re.IGNORECASE
+    )
+    match = form_name_pattern.search(text)
+    if not match:
+        return False
+    if match.group(1):
+        bracketed_content = match.group(1)
+        invalid_bracketed_patterns = [r'^L\d+$', r'^[A-Z]\d+$', r'^A\d+$']
+        for pattern in invalid_bracketed_patterns:
+            if re.match(pattern, bracketed_content):
+                return False
+        return True
+    elif 'repeating' in text.lower():
+        if len(text) < 10 or len(text) > 80:
+            return False
+        exclusion_patterns = [
+            r'^(CRF|Form)\s+(Date|Time|Coordinator|Designer|Notes?).*',
+            r'^\w{1,4}\s+(Date|Time|Coordinator|Designer)\b.*',
+            r'^\s*(Date|Time|Coordinator|Designer)\s*-\s*(Non-)?[Rr]epeating.*',
+        ]
+        for pattern in exclusion_patterns:
+            if re.match(pattern, text, re.IGNORECASE):
+                return False
+        return True
+    return False
 
 
-def extract_form_labels_and_names(data):
-    """
-    Extracts forms and their corresponding labels from the hierarchical data.
-    It processes the data section by section, where each section is defined
-    by an H1 heading.
-    """
+def is_valid_form_label(text):
+    """Check if text is a valid form label by excluding common non-label patterns."""
+    if not text or len(text) < 3:
+        return False
+    invalid_patterns = [
+        r'^\s*V\d+[A-Z]*\s*$', r'Design\s*Notes?\s*:?$',
+        r'Oracle\s*item\s*design\s*notes?\s*:?$',
+        r'General\s*item\s*design\s*notes?\s*:?$',
+        r'^\s*Non-Visit\s*Related\s*$', r'^Data from.*', r'^Hidden item.*',
+        r'^The item.*', r'^\d+\s+', r'.*\|A\d+\|.*',
+        r'^\s*(Non-)?[Rr]epeating(\s+form)?\s*$'
+    ]
+    for pattern in invalid_patterns:
+        if re.match(pattern, text, re.IGNORECASE):
+            return False
+    if len(text) > 100:
+        return False
+    return True
+
+
+def extract_forms_cleaned(data):
+    """Extract forms with improved duplicate handling and validation."""
     results = []
+    seen_forms = set()
 
     def process_h1_section(h1_node):
-        """Process an H1 section to find all forms and assign them labels."""
         h1_text = get_text(h1_node)
+        if not is_valid_form_label(h1_text): h1_text = "Unknown Section"
 
-        # Find all forms within this H1 section
-        forms_in_section = deep_search_for_forms(h1_node)
+        def find_forms_in_node(node, current_label=None):
+            if not isinstance(node, dict): return
+            node_name, node_text = node.get("name", ""), get_text(node)
+            if node_name.startswith("H2") and is_valid_form_label(node_text) and not is_valid_form_name(node_text):
+                current_label = node_text
+            if is_valid_form_name(node_text):
+                form_name, form_label = node_text, current_label if current_label else h1_text
+                form_key = (form_label, form_name)
+                if form_key not in seen_forms:
+                    results.append(
+                        {"Form Label": form_label, "Form Name": form_name, "H1_Text": h1_text, "Form_Node": node,
+                         "Parent_H1_Node": h1_node})
+                    seen_forms.add(form_key)
+            for child in node.get("children", []): find_forms_in_node(child, current_label)
 
-        # For each found form, assign a label by looking for the nearest
-        # preceding H2 heading.
-        for form in forms_in_section:
-            form_node = form["Node"]
-            # Default the label to the H1 text if no specific H2 is found
-            form_label = h1_text
+        find_forms_in_node(h1_node, None)
 
-            def find_label_for_node(search_node, target_node):
-                """
-                Traverses the tree to find the appropriate H2 label for a
-                given target node.
-                """
-                if not isinstance(search_node, dict):
-                    return None
+    def find_h1_sections(node):
+        if not isinstance(node, dict): return
+        if node.get("name", "").startswith("H1"): process_h1_section(node)
+        for child in node.get("children", []): find_h1_sections(child)
 
-                children = search_node.get("children", [])
-                for i, child in enumerate(children):
-                    if child == target_node:
-                        # The target node is found. Now, look backwards from its
-                        # position to find the last H2 heading.
-                        for j in range(i - 1, -1, -1):
-                            prev_sibling = children[j]
-                            prev_name = prev_sibling.get("name", "")
-                            prev_text = get_text(prev_sibling)
-                            # A valid label is an H2 that does not contain a form name itself
-                            if prev_name.startswith("H2") and not re.search(r'\[([A-Za-z0-9_\-]+)\]', prev_text):
-                                return prev_text
-                        return None  # No preceding H2 sibling found
-                    else:
-                        # If not found, search within the child node
-                        result = find_label_for_node(child, target_node)
-                        if result:
-                            return result
-                return None
-
-            specific_label = find_label_for_node(h1_node, form_node)
-            if specific_label:
-                form_label = specific_label
-
-            results.append({
-                "Form Label": form_label,
-                "Form Name": form["Form Name"],
-                "H1_Text": h1_text,
-                "Form_Node": form_node,
-                "Parent_H1_Node": h1_node  # Keep reference to parent H1 node
-            })
-
-    def find_all_h1_sections(node):
-        """Find and process all H1 sections in the data."""
-        if not isinstance(node, dict):
-            return
-
-        if node.get("name", "").startswith("H1"):
-            process_h1_section(node)
-        else:
-            # If the current node is not H1, check its children
-            for child in node.get("children", []):
-                find_all_h1_sections(child)
-
-    find_all_h1_sections(data)
+    find_h1_sections(data)
     return results
 
 
 def find_nodes_by_name_pattern(node, pattern):
-    """Find all nodes matching a name pattern"""
-    if not isinstance(node, dict):
-        return []
-
+    """Find all nodes matching a name pattern recursively."""
+    if not isinstance(node, dict): return []
     matches = []
-    name = node.get("name", "")
-
-    if re.search(pattern, name):
-        matches.append(node)
-
-    for child in node.get("children", []):
-        matches.extend(find_nodes_by_name_pattern(child, pattern))
-
+    if re.search(pattern, node.get("name", "")): matches.append(node)
+    for child in node.get("children", []): matches.extend(find_nodes_by_name_pattern(child, pattern))
     return matches
 
 
-def search_for_text_pattern(node, pattern):
-    """Search for text pattern in node and all children"""
-    if not isinstance(node, dict):
-        return []
+# ==============================================================================
+# 🔥 CORRECTED ITEM EXTRACTION LOGIC
+# ==============================================================================
 
-    matches = []
-    text = get_text(node)
+# ============== NEW HELPER FUNCTIONS - ADD THESE ==================
 
-    if re.search(pattern, text):
-        matches.append(node)
-
-    for child in node.get("children", []):
-        matches.extend(search_for_text_pattern(child, pattern))
-
-    return matches
-
-
-def has_asterisk(node):
-    """Check if node or its children contain asterisk"""
+def check_p_extracharspan_extracharspan_pattern(node):
+    """
+    Check if node has pattern: P -> ExtraCharSpan -> ExtraCharSpan[]
+    Returns True if a P node contains ExtraCharSpan, which itself contains ExtraCharSpan(s)
+    """
     if not isinstance(node, dict):
         return False
 
-    text = get_text(node)
-    if "*" in text:
-        return True
+    # Check if current node is P
+    if node.get("name", "") == "P":
+        children = node.get("children", [])
+        for child in children:
+            # Check if child is ExtraCharSpan
+            if child.get("name", "") == "ExtraCharSpan":
+                # Check if this ExtraCharSpan has ExtraCharSpan children
+                grandchildren = child.get("children", [])
+                for grandchild in grandchildren:
+                    if grandchild.get("name", "") == "ExtraCharSpan":
+                        return True
 
+    # Recursively check all children
     for child in node.get("children", []):
-        if has_asterisk(child):
+        if check_p_extracharspan_extracharspan_pattern(child):
             return True
 
     return False
 
 
-def get_h1_texts_with_children_only(data):
+def check_p_sub_pattern(node):
     """
-    Get H1 texts only from H1 nodes that have children.
+    Check if node has pattern: P -> Sub
+    Returns True if a P node directly contains a Sub child
     """
-    h1_texts_with_children = []
-
-    def collect_h1_with_children(node):
-        if not isinstance(node, dict):
-            return
-
-        if node.get("name", "").startswith("H1"):
-            # Only include H1 nodes that have children
-            if node.get("children", []):  # Check if H1 has children
-                h1_texts_with_children.append(get_text(node))
-
-        for child in node.get("children", []):
-            collect_h1_with_children(child)
-
-    collect_h1_with_children(data)
-    return h1_texts_with_children
-
-
-def is_number(text):
-    """Check if text represents a number"""
-    try:
-        float(text.replace(",", ""))
-        return True
-    except:
+    if not isinstance(node, dict):
         return False
 
+    # Check if current node is P
+    if node.get("name", "") == "P":
+        children = node.get("children", [])
+        for child in children:
+            # Check if child is Sub
+            if child.get("name", "") == "Sub":
+                return True
 
-def is_year_format(text):
-    """Check if text matches yyyy-yyyy year format"""
-    year_pattern = r'\b\d{4}-\d{4}\b'
-    return bool(re.search(year_pattern, text))
+    # Recursively check all children
+    for child in node.get("children", []):
+        if check_p_sub_pattern(child):
+            return True
+
+    return False
 
 
-def determine_data_type(form_node):
+# ================================================================
+
+def is_instruction(text):
     """
-    Determine data type with enhanced logic
-    Priority order:
-    1. If has ExtraCharSpan -> 'Codelist'
-    2. If LBody text is yyyy-yyyy format -> 'Date/Time'
-    3. If LBody text is numeric -> 'Number'
-    4. Default -> 'Text'
+    Check if text is likely an instruction based on keywords and punctuation density,
+    including 'collect' and 'integration'.
     """
+    if not isinstance(text, str) or not text.strip():
+        return False
+    text = text.strip()
 
-    # First check for ExtraCharSpan nodes (highest priority)
-    extra_char_nodes = find_nodes_by_name_pattern(form_node, r'^ExtraCharSpan')
-    if extra_char_nodes:
+    # Rule 1: Keywords ('collect' and 'integration' are included)
+    keywords = re.compile(
+        r'\b(please|note|ensure|click|enter|complete|select|indicate|check|provide|collect|integration)\b',
+        re.IGNORECASE)
+
+    # If the text contains 'integration' or any other keyword, it is an instruction.
+    if keywords.search(text):
+        return True
+
+    # Rule 2: Punctuation density (a rough heuristic)
+    punctuation_count = len(re.findall(r'[:\-\(\)\.?!;]', text))
+    word_count = len(text.split())
+
+    if word_count < 5 and punctuation_count >= 1:
+        return True
+    elif word_count >= 5 and word_count > 0 and (punctuation_count / word_count) > 0.1:
+        return True
+
+    # Rule 3: Start with a number and period (list/step instruction)
+    if re.match(r'^\s*\d+\.\s+\w', text):
+        return True
+
+    return False
+
+
+
+
+
+
+
+
+
+def has_option_child(node):
+    """
+    Recursively check if a node contains an option-indicating child.
+    Checks three patterns in order:
+    1. Direct option nodes (LI, L, ExtraCharSpan, LBody)
+    2. P/ExtraCharSpan/ExtraCharSpan[] pattern
+    3. P/Sub pattern
+    """
+    if not isinstance(node, dict):
+        return False
+
+    # LOGIC 1: Original check for direct option-indicating nodes
+    if node.get("name", "") in ["LI", "L", "ExtraCharSpan", "LBody"]:
+        return True
+
+    for child in node.get("children", []):
+        if has_option_child(child):
+            return True
+
+    # LOGIC 2: Check for P/ExtraCharSpan/ExtraCharSpan[] pattern
+    if check_p_extracharspan_extracharspan_pattern(node):
+        return True
+
+    # LOGIC 3: Check for P/Sub pattern
+    if check_p_sub_pattern(node):
+        return True
+
+    return False
+
+
+def extract_items_from_form(form_node):
+    """
+    Extracts item data, handling rows with TH (question) + TD (options),
+    and persistently tracking the Item Group across table breaks.
+    """
+    items_data = []
+    table_nodes = find_nodes_by_name_pattern(form_node, r'^Table')
+
+    # 🔥 FIX: Initialize Item Group outside the table loop to persist across table breaks.
+    current_item_group = ""
+
+    for table in table_nodes:
+        tr_nodes = find_nodes_by_name_pattern(table, r'^TR')
+
+        for tr in tr_nodes:
+            # 🔥 Get ALL TH and TD cells in a row
+            cells = [child for child in tr.get("children", []) if child.get("name", "").startswith(("TH", "TD"))]
+
+            # 🔥 ITEM GROUP LOGIC: Check for a single-cell row that is likely an Item Group header
+            if len(cells) == 1:
+                potential_group_text = get_text(cells[0])
+                # Only treat it as an Item Group if it is a valid label and NOT an instruction
+                if is_valid_form_label(potential_group_text) and not is_instruction(potential_group_text):
+                    current_item_group = potential_group_text
+                    continue  # Skip processing this row as an item
+            # 🔥 END ITEM GROUP LOGIC
+
+            # 🔥 NEW: Handle 3-column structure (TH | TD | TD[2])
+            if len(cells) == 3:
+                th_cell, question_cell, option_cell = cells
+
+                # Check if this is a valid question row (TH has asterisk, question_cell has text)
+                th_text = get_text(th_cell).strip()
+                question_text = ""
+
+                # Extract question from TD (second column)
+                p_nodes = find_nodes_by_name_pattern(question_cell, r'^P')
+                if p_nodes:
+                    # Check if ALL P nodes are ParagraphSpan (skip category headers)
+                    all_paragraph_spans = all(node.get("name", "").startswith("ParagraphSpan") for node in p_nodes)
+                    if all_paragraph_spans:
+                        continue
+
+                    # Extract text from ALL P nodes
+                    p_texts = [get_text(p_node) for p_node in p_nodes if get_text(p_node)]
+                    question_text = "\n".join(p_texts)
+                else:
+                    question_text = get_text(question_cell)
+
+                # Skip if no valid question text
+                if not question_text or not question_text.strip():
+                    continue
+
+                # Add this item (third column becomes the option node)
+                items_data.append({
+                    "Item Group": current_item_group,  # 🔥 ASSIGN ITEM GROUP
+                    "Item Name": question_text,
+                    "Option_TD_Node": option_cell
+                })
+                continue
+
+            # 🔥 ORIGINAL LOGIC: Handle 2-column structure (TH/TD | TD with options)
+            for i, cell in enumerate(cells):
+                if i > 0 and has_option_child(cell):
+                    prev_cell = cells[i - 1]
+                    item_name_text = ""
+
+                    p_nodes = find_nodes_by_name_pattern(prev_cell, r'^P')
+
+                    if p_nodes:
+                        all_paragraph_spans = all(node.get("name", "").startswith("ParagraphSpan") for node in p_nodes)
+                        if all_paragraph_spans:
+                            continue
+
+                        p_texts = [get_text(p_node) for p_node in p_nodes if get_text(p_node)]
+                        item_name_text = "\n".join(p_texts)
+                    else:
+                        item_name_text = get_text(prev_cell)
+
+                    if not item_name_text:
+                        continue
+
+                    items_data.append({
+                        "Item Group": current_item_group,  # 🔥 ASSIGN ITEM GROUP
+                        "Item Name": item_name_text,
+                        "Option_TD_Node": cell
+                    })
+
+    # 🔥 Enhanced deduplication using Item Group + Item Name
+    unique_items = []
+    seen_names = set()
+    for item in items_data:
+        item_key = (item["Item Name"], item.get("Item Group", ""))  # 🔥 Tuple key for uniqueness
+        if item_key not in seen_names:
+            seen_names.add(item_key)
+            unique_items.append(item)
+    return unique_items
+
+
+def determine_data_type(option_td_node, codelist_content):
+    """
+    Determine data type based on:
+    1. Codelist content patterns (Date/Time, Label)
+    2. JSON node structure (Codelist)
+    3. Default to Text
+
+    Parameters:
+    - option_td_node: The TD node containing options from JSON
+    - codelist_content: The text content from "Codelist - Choice Labels" column
+    """
+    if not option_td_node:
+        return "Text"
+
+    # Ensure codelist_content is a string
+    if codelist_content is None:
+        codelist_content = ""
+    else:
+        codelist_content = str(codelist_content).strip()
+
+    # 🔥 LOGIC 1: Check for Date/Time pattern in codelist content
+    # Pattern: Req/Req/Req(YYYY-YYYY) or similar date range patterns
+    date_time_pattern = r'Req.*?\(\d{4}-\d{4}\)'
+    if re.search(date_time_pattern, codelist_content, re.IGNORECASE):
+        return "Date/Time"
+
+    # 🔥 LOGIC 2: Check for Codelist in JSON structure
+    # Look for LBody nodes that contain ExtraCharSpan children
+    lbody_nodes = find_nodes_by_name_pattern(option_td_node, r'^LBody')
+    if lbody_nodes:
+        for lbody_node in lbody_nodes:
+            # Check if this LBody has ExtraCharSpan children
+            extracharspan_nodes = find_nodes_by_name_pattern(lbody_node, r'^ExtraCharSpan')
+            if extracharspan_nodes:
+                return "Codelist"
+
+    # Also check for direct ExtraCharSpan nodes (original logic)
+    if find_nodes_by_name_pattern(option_td_node, r'^ExtraCharSpan'):
         return "Codelist"
 
-    # Then check LBody nodes for content
-    lbody_nodes = find_nodes_by_name_pattern(form_node, r'^LBody')
-    if lbody_nodes:
-        lbody_text = get_text(lbody_nodes[0])
+    # 🔥 LOGIC 3: Check for Label pattern
+    # Pattern: Contains |...| but NO multiple bullet points (no multiple •)
+    # This catches: • |N3| Years, • |0 < N3 ≤ 200| ¡ kg
+    if '|' in codelist_content:
+        # Count bullet points
+        bullet_count = codelist_content.count('•')
+        # If only ONE bullet (or none) and contains pipes, it's a Label
+        if bullet_count <= 1:
+            return "Label"
 
-        # Check if it's year format (yyyy-yyyy) - second priority
-        if is_year_format(lbody_text):
-            return "Date/Time"
-
-        # Check if it's a number - third priority
-        if is_number(lbody_text):
-            return "Number"
-
-    # Default to Text - lowest priority
+    # 🔥 LOGIC 4: Default to Text
     return "Text"
 
 
-def get_all_lbody_values(form_node):
+def get_all_lbody_values(option_td_node):
     """
-    ✅ ENHANCED FUNCTION: Get all LBody node values for the current form
-    and format them with bullet points on new lines as requested:
-    Example output:
-    • Yes
-    • No, none were collected
+    Get all option values from the specific option cell.
+    Extracts from LBody, Sub, or P nodes depending on the structure.
     """
-    lbody_nodes = find_nodes_by_name_pattern(form_node, r'^LBody')
-
-    if not lbody_nodes:
+    if not option_td_node:
         return ""
 
-    # Collect all LBody text values
-    lbody_values = []
-    for lbody_node in lbody_nodes:
-        text = get_text(lbody_node)
-        if text:  # Only add non-empty values
-            lbody_values.append(text)
+    # First try to find LBody nodes (for radio button/codelist options)
+    lbody_nodes = find_nodes_by_name_pattern(option_td_node, r'^LBody')
+    if lbody_nodes:
+        values = [get_text(node) for node in lbody_nodes if get_text(node)]
+        seen = set()
+        unique_values = [x for x in values if not (x in seen or seen.add(x))]
+        return "\n".join(f"• {val}" for val in unique_values)
 
-    if not lbody_values:
+    # 🔥 NEW: Try to find Sub nodes (for subscript-style options)
+    sub_nodes = find_nodes_by_name_pattern(option_td_node, r'^Sub')
+    if sub_nodes:
+        values = []
+        for node in sub_nodes:
+            text = get_text(node)
+            # Skip empty text and special characters
+            if text and text.strip() not in ["", "\uf0fe", "□", "¡"]:
+                # Clean up the text (remove leading bullets/symbols)
+                cleaned_text = text.strip().lstrip("¡ ").lstrip("□ ").strip()
+                if cleaned_text:
+                    values.append(cleaned_text)
+
+        seen = set()
+        unique_values = [x for x in values if not (x in seen or seen.add(x))]
+        if unique_values:
+            return "\n".join(f"• {val}" for val in unique_values)
+
+    # Last resort: Try P nodes (for date/text format fields)
+    p_nodes = find_nodes_by_name_pattern(option_td_node, r'^P')
+    if p_nodes:
+        values = []
+        for node in p_nodes:
+            text = get_text(node)
+            # Skip empty text and special characters
+            if text and text.strip() not in ["", "\uf0fe", "□", "¡"]:
+                values.append(text)
+
+        seen = set()
+        unique_values = [x for x in values if not (x in seen or seen.add(x))]
+        if unique_values:
+            return "\n".join(f"• {val}" for val in unique_values)
+
+    return ""
+
+
+def calculate_field_length(codelist_content):
+    """
+    Calculate field length from codelist content for Text or Label data types.
+    Extracts the maximum length from patterns like |N3| (3 characters) or |0 < N3 ≤ 200| (3 digits).
+    """
+    if not codelist_content:
         return ""
 
-    # Remove duplicates while preserving order
-    seen = set()
-    unique_values = []
-    for value in lbody_values:
-        if value not in seen:
-            seen.add(value)
-            unique_values.append(value)
+    # Clean up the content
+    content = str(codelist_content).strip()
 
-    # Format with bullet points and new lines
-    formatted_values = []
-    for value in unique_values:
-        formatted_values.append(f"• {value}")
+    # Pattern 1: |Nxx| where xx is the number of characters/digits (e.g., |N3| = 3)
+    simple_n_pattern = r'\|N(\d+)\|'
+    match = re.search(simple_n_pattern, content)
+    if match:
+        return match.group(1)  # Returns the digit (e.g., "3" from |N3|)
 
-    return "\n".join(formatted_values)
+    # Pattern 2: |0 < N3 ≤ 200| - extract the digit from N3
+    complex_n_pattern = r'\|.*N(\d+).*\|'
+    match = re.search(complex_n_pattern, content)
+    if match:
+        return match.group(1)  # Returns the digit (e.g., "3" from N3)
+
+    # Pattern 3: For plain text, calculate the actual length of content (excluding bullets)
+    # Remove bullet points and calculate max line length
+    lines = content.split('\n')
+    max_length = 0
+    for line in lines:
+        cleaned_line = line.strip().lstrip('• ').strip()
+        if cleaned_line and not cleaned_line.startswith('|'):  # Ignore format patterns
+            max_length = max(max_length, len(cleaned_line))
+
+    if max_length > 0:
+        return str(max_length)
+
+    return ""
 
 
-def get_precision(text):
-    """Get decimal precision from number text"""
-    try:
-        num_str = text.replace(",", "")
-        if "." in num_str:
-            return len(num_str.split(".")[1])
-        return 0
-    except:
-        return 0
-
-
-def process_clinical_forms_final_enhanced(json_file_path, template_csv_path, output_csv_path):
+def calculate_precision(codelist_content):
     """
-    ✅ FINAL ENHANCED function with all improvements:
-    - Enhanced data type detection
-    - All LBody values in Codelist - Choice Labels with bullet points
-    - Updated H1 children-only repeating logic
+    Calculate precision (decimal places) from codelist content for Label data types.
+    Extracts precision from patterns like |N3.2| (2 decimal places).
     """
+    if not codelist_content:
+        return ""
 
-    # Load the template CSV and the JSON data
+    content = str(codelist_content).strip()
+
+    # Pattern 1: |N3.2| where 3 is total digits and 2 is decimal places
+    precision_pattern = r'\|N\d+\.(\d+)\|'
+    match = re.search(precision_pattern, content)
+    if match:
+        return match.group(1)  # Returns the decimal places (e.g., "2" from |N3.2|)
+
+    # Pattern 2: Look for decimal notation in complex patterns like |0.00 < N3.2 ≤ 200.00|
+    decimal_in_constraint = r'\|.*N\d+\.(\d+).*\|'
+    match = re.search(decimal_in_constraint, content)
+    if match:
+        return match.group(1)
+
+    # Pattern 3: Check if there are decimal values in the range (e.g., 0.00, 200.00)
+    decimal_values = re.findall(r'\d+\.(\d+)', content)
+    if decimal_values:
+        # Return the maximum decimal places found
+        max_decimals = max(len(d) for d in decimal_values)
+        return str(max_decimals)
+
+    # Default: No decimal places (integer)
+    return "0"
+
+
+def extract_number_range(codelist_content):
+    """
+    Extract numeric range from patterns like |0 < N3 ≤ 200| → "0 - 200"
+    """
+    if not codelist_content:
+        return ""
+
+    content = str(codelist_content).strip()
+
+    # Pattern: |min < Nx ≤ max| or |min ≤ Nx ≤ max| or |min < Nx < max|
+    range_pattern = r'\|(\d+(?:\.\d+)?)\s*[<≤]\s*N\d+(?:\.\d+)?\s*[<≤]\s*(\d+(?:\.\d+)?)\|'
+    match = re.search(range_pattern, content)
+    if match:
+        min_val = match.group(1)
+        max_val = match.group(2)
+        return f"{min_val} - {max_val}"
+
+    # Pattern: |0 < N3| (only minimum, no maximum)
+    min_only_pattern = r'\|(\d+(?:\.\d+)?)\s*[<≤]\s*N\d+(?:\.\d+)?\|'
+    match = re.search(min_only_pattern, content)
+    if match:
+        min_val = match.group(1)
+        return f"{min_val} - "
+
+    # Pattern: |N3 ≤ 200| (only maximum, no minimum)
+    max_only_pattern = r'\|N\d+(?:\.\d+)?\s*[<≤]\s*(\d+(?:\.\d+)?)\|'
+    match = re.search(max_only_pattern, content)
+    if match:
+        max_val = match.group(1)
+        return f" - {max_val}"
+
+    return ""
+
+
+def check_query_future_date(data_type):
+    """
+    Determine if future dates should trigger a query.
+    For Date/Time fields, typically set to "No" (allow future dates).
+    """
+    if data_type == "Date/Time":
+        return "Y"
+    return ""
+
+
+def check_required_field(item_name):
+    """
+    Check if item is required by looking for asterisk (*) at the beginning.
+    """
+    if not item_name:
+        return "N"
+
+    # Check if item name starts with * (after stripping whitespace)
+    item_text = str(item_name).strip()
+    if item_text.startswith('*'):
+        return "Y"
+
+    return "N"
+
+
+# ==============================================================================
+# MAIN PROCESSING FUNCTION
+# ==============================================================================
+
+def process_clinical_forms(json_file_path, template_csv_path, output_csv_path):
+    """Main function to process JSON and create the item-based CSV."""
     template_df = pd.read_csv(template_csv_path)
     print("✅ Template CSV loaded successfully")
 
-    # Load the JSON data
     with open(json_file_path, "r", encoding="utf-8") as file:
-        json_content = file.read()
-        data = json.loads(json_content)
+        data = json.load(file)
     print("✅ JSON data loaded successfully")
 
-    # Extract the forms
-    extracted_forms = extract_form_labels_and_names(data)
+    extracted_forms = extract_forms_cleaned(data)
     print(f"✅ Found {len(extracted_forms)} forms to process")
 
-    # Get H1 texts only from H1 nodes that have children
-    h1_texts_with_children = get_h1_texts_with_children_only(data)
-    print(f"✅ Found {len(h1_texts_with_children)} H1 nodes with children")
+    all_item_rows = []
+    print("\n🔄 Processing forms with corrected item-based row generation...")
 
-    # Process each form according to the 14 instructions with all enhancements
-    form_data_rows = []
+    for form in extracted_forms:
+        items = extract_items_from_form(form['Form_Node'])
+        print(f"  > Form '{form['Form Name']}': Found {len(items)} unique items.")
 
-    print("\n🔄 Processing forms with ALL ENHANCEMENTS...")
-    for form_idx, form in enumerate(extracted_forms):
-        print(f"Processing Form {form_idx + 1}: {form['Form Name']}")
+        if not items:
+            items.append({"Item Name": "", "Option_TD_Node": None, "Item Group": ""})
 
-        form_row = {}
-        form_node = form['Form_Node']
-        parent_h1_node = form['Parent_H1_Node']
-        h1_text = form['H1_Text']
+        for item in items:
+            item_row = {}
+            option_node = item.get("Option_TD_Node")
+            item_name = item['Item Name']
+            # 🔥 Extract Item Group and set to 'NaN' if empty
+            item_group_value = item.get("Item Group", "")
+            if item_group_value == "":
+                item_group_value = 'NaN'
 
-        # Fill Form Label and Form Name in the correct columns
-        form_row['CTDM Optional, if blank CDP to propose'] = form['Form Label']
-        form_row['Input needed from SDTM'] = form['Form Name']
-        form_row['CDAI input needed'] = h1_text
+            item_row['CTDM Optional, if blank CDP to propose'] = form['Form Label']
+            item_row['Input needed from SDTM'] = form['Form Name']
+            item_row['CDAI input needed'] = item_group_value
+            item_row['Unnamed: 4'] = ''
+            item_row['Unnamed: 5'] = 50
+            item_row['Unnamed: 9'] = item_name
+            item_row['Unnamed: 10'] = ""
 
-        # UPDATED LOGIC for "Item group Repeating": Only H1s with children
-        parent_h1_has_children = bool(parent_h1_node.get("children", []))
+            # 🔥 Get codelist content first
+            codelist_content = get_all_lbody_values(option_node)
+            item_row['Unnamed: 19'] = codelist_content
 
-        if parent_h1_has_children:
-            h1_count_with_children = h1_texts_with_children.count(h1_text)
-            form_row['Unnamed: 4'] = 'Y' if h1_count_with_children > 1 else ''
-            form_row['Unnamed: 5'] = h1_count_with_children if h1_count_with_children > 1 else 50
-        else:
-            form_row['Unnamed: 4'] = ''
-            form_row['Unnamed: 5'] = 50
+            # 🔥 Determine data type
+            data_type = determine_data_type(option_node, codelist_content)
+            item_row['Unnamed: 16'] = data_type
+            item_row['Unnamed: 22'] = "Radio Button-Vertical" if data_type == "Codelist" else ""
 
-        # Item Label and Item Name (instructions 4-5)
-        tr_nodes = find_nodes_by_name_pattern(form_node, r'^TR')
-        item_label = ""
-        if tr_nodes:
-            for tr in tr_nodes:
-                td_nodes = [child for child in tr.get("children", []) if child.get("name", "").startswith("TD")]
-                if td_nodes:
-                    item_label = get_text(td_nodes[0])
-                    break
-        form_row['Unnamed: 9'] = item_label
+            # 🔥 Calculate Field Length for Text or Label types
+            if data_type in ["Text", "Label"]:
+                field_length = calculate_field_length(codelist_content)
+                item_row['Unnamed: 17'] = field_length
+            else:
+                item_row['Unnamed: 17'] = ""
 
-        item_name = ""
-        if tr_nodes:
-            for tr in tr_nodes:
-                td_nodes = [child for child in tr.get("children", []) if child.get("name", "").startswith("TD")]
-                if len(td_nodes) > 1:
-                    item_name = get_text(td_nodes[1])
-                    break
-        form_row['Unnamed: 10'] = item_name
+            # 🔥 Calculate Precision for Label type only
+            if data_type == "Label":
+                precision = calculate_precision(codelist_content)
+                item_row['Unnamed: 18'] = precision
+            else:
+                item_row['Unnamed: 18'] = ""
 
-        # Enhanced Data Type Detection (instruction 6)
-        data_type = determine_data_type(form_node)
-        form_row['Unnamed: 16'] = data_type
+            # 🔥 NEW: Extract number range for Label type
+            if data_type == "Label":
+                number_range = extract_number_range(codelist_content)
+                item_row['Unnamed: 23'] = number_range
+            else:
+                item_row['Unnamed: 23'] = ""
 
-        # Field Length (instruction 7) - based on first LBody node
-        lbody_nodes = find_nodes_by_name_pattern(form_node, r'^LBody')
-        first_lbody_text = ""
-        if lbody_nodes:
-            first_lbody_text = get_text(lbody_nodes[0])
+            # 🔥 NEW: Check if future dates should trigger query
+            query_future_date = check_query_future_date(data_type)
+            item_row['Unnamed: 24'] = query_future_date
 
-        form_row['Unnamed: 17'] = len(first_lbody_text) if first_lbody_text else ""
+            # 🔥 NEW: Check if field is required (based on * in item name)
+            is_required = check_required_field(item_name)
+            item_row['Unnamed: 25'] = is_required
 
-        # Precision (instruction 8)
-        precision = ""
-        if data_type == "Number" and first_lbody_text:
-            precision = get_precision(first_lbody_text)
-        form_row['Unnamed: 18'] = precision
+            # 🔥 NEW: Set "Form,Item" if required, otherwise blank
+            if is_required == "Y":
+                item_row['Unnamed: 26'] = "Form,Item"
+            else:
+                item_row['Unnamed: 26'] = ""
 
-        # ✅ ENHANCED Codelist Choice Labels (instruction 9) - ALL LBody values with bullets
-        codelist_choice_labels = get_all_lbody_values(form_node)
-        form_row['Unnamed: 19'] = codelist_choice_labels
+            all_item_rows.append(item_row)
 
-        # Control Type (instruction 10)
-        form_row['Unnamed: 22'] = "Radio Button-Vertical" if data_type == "Codelist" else ""
-
-        # Range and Date Query (instructions 11-12)
-        year_pattern = r'\b\d{4}-\d{4}\b'
-        year_matches = search_for_text_pattern(form_node, year_pattern)
-        year_range = ""
-        if year_matches:
-            year_range = get_text(year_matches[0])
-            year_match = re.search(year_pattern, year_range)
-            if year_match:
-                year_range = year_match.group()
-        form_row['Unnamed: 23'] = year_range
-        form_row['Unnamed: 24'] = "Y" if year_range else ""
-
-        # Required and Open Query (instructions 13-14)
-        form_row['Unnamed: 25'] = "Y" if has_asterisk(form_node) else ""
-        form_row['Unnamed: 26'] = "Form,Item" if has_asterisk(form_node) else ""
-
-        form_data_rows.append(form_row)
-
-    # Create the final CSV
-    final_df = template_df.copy()
-
-    # Add form data rows
-    for form_row in form_data_rows:
-        new_row = {}
-        for col in final_df.columns:
-            new_row[col] = form_row.get(col, "")
-
-        new_row_df = pd.DataFrame([new_row])
-        final_df = pd.concat([final_df, new_row_df], ignore_index=True)
-
-    # Save the filled CSV
+    final_df = pd.DataFrame(all_item_rows, columns=template_df.columns)
+    final_df = pd.concat([template_df, final_df], ignore_index=True)
     final_df.to_csv(output_csv_path, index=False)
-
-    print(f"\n✅ SUCCESS! Created FINAL ENHANCED CSV: {output_csv_path}")
-
-    # Show statistics
-    data_types = [row['Unnamed: 16'] for row in form_data_rows]
-    from collections import Counter
-    type_counts = Counter(data_types)
-    print(f"\n📊 Data Type Distribution:")
-    for data_type, count in type_counts.items():
-        print(f"  {data_type}: {count} forms")
-
-    # Show codelist examples
-    codelist_forms = [row for row in form_data_rows if row['Unnamed: 19']]
-    print(f"\n📋 Forms with Enhanced Codelist Labels: {len(codelist_forms)}")
-
-    return final_df
+    print(f"\n✅ SUCCESS! Created item-centric CSV: {output_csv_path} with {len(all_item_rows)} item rows.")
 
 
-# Example usage with all enhancements
 if __name__ == "__main__":
     json_file = "hierarchical_output_final.json"
     template_file = "template_first4rows.csv"
-    output_file = "FINAL_ENHANCED_clinical_forms.csv"
+    output_file = "itemgrp_combined.csv"
 
     try:
         print("=" * 80)
-        print("CLINICAL FORMS PROCESSING - FINAL ENHANCED VERSION")
+        print("CLINICAL FORMS PROCESSING - CORRECTED ITEM-BASED VERSION")
         print("=" * 80)
-
-        result_df = process_clinical_forms_final_enhanced(json_file, template_file, output_file)
-        print(f"\n🎯 PROCESSING COMPLETE WITH ALL ENHANCEMENTS!")
-        print("✅ All enhancements applied:")
-        print("   1. Enhanced data type detection (ExtraCharSpan → Date/Time → Number → Text)")
-        print("   2. Enhanced codelist labels (ALL LBody values with bullet points)")
-        print("   3. Updated H1 children-only repeating logic")
-        print("   4. Proper Form Label and Form Name mapping")
+        process_clinical_forms(json_file, template_file, output_file)
+        print("\n🎯 PROCESSING COMPLETE!")
+        print("✅ Key features of this version:")
+        print("   1. 🔥 FIX: Now correctly handles items in <TH> + <TD> row structures.")
+        print("   2. 🔥 Data Type and Codelist values are item-specific.")
+        print("   3. ✅ Item Label column is correctly left empty.")
+        print("   4. ✅ Generates one row per unique item found in a form.")
 
     except Exception as e:
         print(f"❌ An error occurred: {e}")
