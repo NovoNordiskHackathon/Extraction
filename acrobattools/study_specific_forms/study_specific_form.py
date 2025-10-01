@@ -61,6 +61,7 @@
 ######################################################################################################
 
 
+
 import json
 import csv
 import re
@@ -651,12 +652,105 @@ def check_required_field(item_name):
     return "N"
 
 
+
 # ==============================================================================
-# MAIN PROCESSING FUNCTION
+# NEW HELPER FUNCTIONS FOR ITEM GROUP REPEATING LOGIC
+# ==============================================================================
+
+def analyze_item_groups_per_form(items):
+    """
+    Analyze item groups for a form to determine which ones are repeating.
+
+    Parameters:
+    - items: List of item dictionaries with 'Item Group' and 'Item Name' keys
+
+    Returns:
+    - item_group_counts: Dict mapping each Item Group to its occurrence count
+    - repeating_groups: Set of Item Groups that occur more than once
+    """
+    from collections import Counter
+
+    # Extract all item groups (excluding empty ones)
+    item_groups = [
+        item.get("Item Group", "").strip()
+        for item in items
+        if item.get("Item Group", "").strip() and item.get("Item Group", "").strip() != 'NaN'
+    ]
+
+    # Count occurrences of each item group
+    item_group_counts = Counter(item_groups)
+
+    # Identify repeating groups (count > 1)
+    repeating_groups = {group for group, count in item_group_counts.items() if count > 1}
+
+    return item_group_counts, repeating_groups
+
+
+def get_item_group_repeating_flag(item_group, repeating_groups):
+    """
+    Determine if an item group is repeating.
+
+    Parameters:
+    - item_group: The item group value for the current item
+    - repeating_groups: Set of item groups that are repeating
+
+    Returns:
+    - 'Y' if the item group is repeating, 'N' otherwise
+    """
+    if not item_group or item_group == 'NaN' or item_group.strip() == '':
+        return 'N'
+
+    return 'Y' if item_group in repeating_groups else 'N'
+
+
+def get_repeat_maximum(item_group, item_group_repeating_flag, item_group_counts):
+    """
+    Determine the repeat maximum value for an item.
+
+    Parameters:
+    - item_group: The item group value for the current item
+    - item_group_repeating_flag: 'Y' or 'N' indicating if the item group is repeating
+    - item_group_counts: Dict mapping each Item Group to its occurrence count
+
+    Returns:
+    - The count of occurrences if repeating ('Y'), otherwise 50
+    """
+    if item_group_repeating_flag == 'Y' and item_group in item_group_counts:
+        return item_group_counts[item_group]
+    else:
+        return 50
+
+
+# ==============================================================================
+# UPDATED HELPER FUNCTION FOR ITEM ORDER
+# ==============================================================================
+
+def assign_item_order(items):
+    """
+    Assign sequential order numbers (1, 2, 3...) to items based on their
+    appearance order in the Item Label column for the current form.
+
+    Parameters:
+    - items: List of item dictionaries with 'Item Name' (Item Label) key
+
+    Returns:
+    - items: List with added 'Item_Order' key for each item
+
+    Logic: Items are numbered sequentially as 1, 2, 3, 4... based on their
+           order in the form's Item Label column.
+    """
+    for idx, item in enumerate(items, start=1):
+        item['Item_Order'] = idx
+
+    return items
+
+
+# ==============================================================================
+# UPDATED MAIN PROCESSING FUNCTION WITH SIMPLE ITEM ORDER
 # ==============================================================================
 
 def process_clinical_forms(json_file_path, template_csv_path, output_csv_path):
-    """Main function to process JSON and create the item-based CSV."""
+    """Main function to process JSON and create the item-based CSV with repeating logic and item order."""
     template_df = pd.read_csv(template_csv_path)
     print("✅ Template CSV loaded successfully")
 
@@ -668,7 +762,7 @@ def process_clinical_forms(json_file_path, template_csv_path, output_csv_path):
     print(f"✅ Found {len(extracted_forms)} forms to process")
 
     all_item_rows = []
-    print("\n🔄 Processing forms with corrected item-based row generation...")
+    print("\n🔄 Processing forms with item group repeating logic and sequential item order...")
 
     for form in extracted_forms:
         items = extract_items_from_form(form['Form_Node'])
@@ -677,62 +771,102 @@ def process_clinical_forms(json_file_path, template_csv_path, output_csv_path):
         if not items:
             items.append({"Item Name": "", "Option_TD_Node": None, "Item Group": ""})
 
+        # 🔥 UPDATED: Assign sequential item order (1, 2, 3...) based on Item Label sequence
+        items = assign_item_order(items)
+
+        # Analyze item groups for this form to determine repeating status
+        item_group_counts, repeating_groups = analyze_item_groups_per_form(items)
+
+        print(f"    📊 Item Group Analysis:")
+        print(f"       - Total unique item groups: {len(item_group_counts)}")
+        print(f"       - Repeating item groups: {len(repeating_groups)}")
+        if repeating_groups:
+            print(f"       - Repeating groups: {repeating_groups}")
+        print(f"    📋 Item Order assigned: {items[0].get('Item_Order', 'N/A')} to {items[-1].get('Item_Order', 'N/A')}")
+
         for item in items:
             item_row = {}
             option_node = item.get("Option_TD_Node")
             item_name = item['Item Name']
-            # 🔥 Extract Item Group and set to 'NaN' if empty
+
+            # Extract Item Group and set to 'NaN' if empty
             item_group_value = item.get("Item Group", "")
             if item_group_value == "":
                 item_group_value = 'NaN'
 
+            # Determine if this item group is repeating
+            item_group_repeating_flag = get_item_group_repeating_flag(
+                item_group_value,
+                repeating_groups
+            )
+
+            # Calculate repeat maximum based on repeating status
+            repeat_maximum = get_repeat_maximum(
+                item_group_value,
+                item_group_repeating_flag,
+                item_group_counts
+            )
+
+            # 🔥 Get sequential item order (1, 2, 3...)
+            item_order = item.get('Item_Order', 1)
+
+            # Fill in the columns
             item_row['CTDM Optional, if blank CDP to propose'] = form['Form Label']
             item_row['Input needed from SDTM'] = form['Form Name']
             item_row['CDAI input needed'] = item_group_value
-            item_row['Unnamed: 4'] = ''
-            item_row['Unnamed: 5'] = 50
+
+            # Fill 'Item group Repeating' column (Unnamed: 4)
+            item_row['Unnamed: 4'] = item_group_repeating_flag
+
+            # Fill 'Repeat Maximum' column (Unnamed: 5)
+            item_row['Unnamed: 5'] = repeat_maximum
+
+            # 🔥 UPDATED: Fill 'Item Order' column with sequential number (1, 2, 3...)
+            # Replace 'Unnamed: X' with the actual column name for Item Order
+            item_row['Unnamed: 8'] = item_order  # UPDATE THIS: Replace 'Unnamed: 6' with correct column
+
             item_row['Unnamed: 9'] = item_name
             item_row['Unnamed: 10'] = ""
 
-            # 🔥 Get codelist content first
+            # Get codelist content first
             codelist_content = get_all_lbody_values(option_node)
             item_row['Unnamed: 19'] = codelist_content
 
-            # 🔥 Determine data type
+            # Determine data type
             data_type = determine_data_type(option_node, codelist_content)
             item_row['Unnamed: 16'] = data_type
             item_row['Unnamed: 22'] = "Radio Button-Vertical" if data_type == "Codelist" else ""
 
-            # 🔥 Calculate Field Length for Text or Label types
+            # Calculate Field Length for Text or Label types
             if data_type in ["Text", "Label"]:
                 field_length = calculate_field_length(codelist_content)
                 item_row['Unnamed: 17'] = field_length
             else:
                 item_row['Unnamed: 17'] = ""
 
-            # 🔥 Calculate Precision for Label type only
+            # Calculate Precision for Label type only
             if data_type == "Label":
                 precision = calculate_precision(codelist_content)
                 item_row['Unnamed: 18'] = precision
             else:
                 item_row['Unnamed: 18'] = ""
 
-            # 🔥 NEW: Extract number range for Label type
+            # Extract number range for Label type
             if data_type == "Label":
                 number_range = extract_number_range(codelist_content)
                 item_row['Unnamed: 23'] = number_range
             else:
                 item_row['Unnamed: 23'] = ""
 
-            # 🔥 NEW: Check if future dates should trigger query
+            # Check if future dates should trigger query
             query_future_date = check_query_future_date(data_type)
             item_row['Unnamed: 24'] = query_future_date
 
-            # 🔥 NEW: Check if field is required (based on * in item name)
+            # Check if field is required (based on * in item name)
             is_required = check_required_field(item_name)
             item_row['Unnamed: 25'] = is_required
 
-            # 🔥 NEW: Set "Form,Item" if required, otherwise blank
+            # Set "Form,Item" if required, otherwise blank
             if is_required == "Y":
                 item_row['Unnamed: 26'] = "Form,Item"
             else:
@@ -744,24 +878,28 @@ def process_clinical_forms(json_file_path, template_csv_path, output_csv_path):
     final_df = pd.concat([template_df, final_df], ignore_index=True)
     final_df.to_csv(output_csv_path, index=False)
     print(f"\n✅ SUCCESS! Created item-centric CSV: {output_csv_path} with {len(all_item_rows)} item rows.")
+    print(f"✅ Item Group Repeating logic applied successfully!")
+    print(f"✅ Item Order assigned sequentially (1, 2, 3...)!")
 
 
 if __name__ == "__main__":
     json_file = "hierarchical_output_final.json"
     template_file = "template_first4rows.csv"
-    output_file = "itemgrp_combined.csv"
+    output_file = "combined.csv"
 
     try:
         print("=" * 80)
-        print("CLINICAL FORMS PROCESSING - CORRECTED ITEM-BASED VERSION")
+        print("CLINICAL FORMS PROCESSING - WITH SEQUENTIAL ITEM ORDER (1, 2, 3...)")
         print("=" * 80)
         process_clinical_forms(json_file, template_file, output_file)
         print("\n🎯 PROCESSING COMPLETE!")
         print("✅ Key features of this version:")
-        print("   1. 🔥 FIX: Now correctly handles items in <TH> + <TD> row structures.")
-        print("   2. 🔥 Data Type and Codelist values are item-specific.")
-        print("   3. ✅ Item Label column is correctly left empty.")
-        print("   4. ✅ Generates one row per unique item found in a form.")
+        print("   1. ✅ Correctly handles items in <TH> + <TD> row structures.")
+        print("   2. ✅ Data Type and Codelist values are item-specific.")
+        print("   3. ✅ 'Item group Repeating' column filled based on occurrence count.")
+        print("   4. ✅ 'Repeat Maximum' column set to count or default 50.")
+        print("   5. 🔥 NEW: 'Item Order' filled sequentially (1, 2, 3...) per form.")
+        print("   6. ✅ Generates one row per unique item found in a form.")
 
     except Exception as e:
         print(f"❌ An error occurred: {e}")
