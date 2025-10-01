@@ -117,7 +117,7 @@ def create_schedule_from_json_hierarchy(json_path: str, output_excel_path: str):
 # --- RUN THE SCRIPT ---
 if __name__ == "__main__":
     try:
-        json_file_path = "/home/ibab/PycharmProjects/NovoNordisk/acrobattools/New_processed_json/hierarchical_1234_ Technical_Design_Sample_eCRF_Req.json"  # Change this to your actual filename
+        json_file_path = ("../structuring_ecrf_json/hierarchical_output_final2.json")  # Change this to your actual filename
         output_file_path = "protocol_schedule_improved_final.xlsx"
 
         if Path(json_file_path).exists():

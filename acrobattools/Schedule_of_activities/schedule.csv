@@ -1,0 +1,56 @@
+Procedure,V1,V2,P3,V4,V5,V6,V7,V8,P9,V10,P11,V12,P13,V14,P15,V16,P17,V18,V19,V19A,P20,V21
+Subject Fasting,,X,,,X,,,X,,,,X,,,,X,,,X,X,,
+Informed Consent,X,,,,,,,,,,,,,,,,,,,,,
+Demography d,X,,,,,,,,,,,,,,,,,,,,,
+Eligibility Criteria,X,,,,,,,,,,,,,,,,,,,,,
+Randomisation,,X,,,,,,,,,,,,,,,,,,,,
+Discontinuation Criteria,,,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X,,,,
+Medical History/Concomitant Illness e,X,X,,,,,,,,,,,,,,,,,,,,
+Medical history evaluation of weight related complications,,,,,,,,,,,,,,,,,,,X,X,,
+Weight History,X,,,,,,,,,,,,,,,,,,,,,
+Concomitant Medication,X,X,,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X
+Childbearing Potential f,X,,,,,,,,,,,,,,,,,,,,,
+Pregnancy Test g,X,X,,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X,,X,X
+Contraceptive Counselling g,X,X,,X,X,X,X,X,,X,,X,,X,,X,,X,X,X,X,
+"Tobacco, Ecigarettes and Nicotine Use",X,,,,,,,,,,,,,,,,,,,,,X
+Risk Factors for Breast Neoplasm f,X,,,,,,,,,,,,,,,,,,,,,
+Risk Factors for Colon Neoplasm,X,,,,,,,,,,,,,,,,,,,,,
+Risk Factors for Skin Cancer,X,,,,,,,,,,,,,,,,,,,,,
+Height,X,,,,,,,,,,,,,,,,,,,,,
+Weight,X,X,,X,X,X,X,X,,X,,X,,X,,X,,X,X,X,,X
+Waist Circumference,,X,,X,X,X,X,X,,X,,X,,X,,X,,X,X,X,,X
+Vital Signs,X,X,,X,X,X,X,X,,X,,X,,X,,X,,X,X,X,,X
+ECG,X,,,,,,,,,,,,,,,,,,,,,
+Eye Examination h,X,,,,,,,,,,,,,,,,,,,,,
+Sit to Stand Test,,X,,,,,,X,,,,,,,,,,,X,,,
+Hand Grip Test,,X,,,,,,X,,,,,,,,,,,X,,,
+Patient Health Questionnaire (PHQ-9),X,,,,,X,,X,,,,X,,,,X,,,X,X,,
+C-SSRS Baseline,X,,,,,,,,,,,,,,,,,,,,,
+C-SSRS Since Last Visit,,,,,,X,,X,,,,X,,,,X,,,X,X,,
+IWQOL-Lite-CT,,X,,,,,,X,,,,X,,,,,,,X,X,,
+SF-36v2® Acute,,X,,,,,,X,,,,X,,,,,,,X,X,,
+Control of Eating Questionnaire (COEQ 19-items NRS),,X,,,,,,X,,,,X,,,,,,,X,,,
+Three-Factor Eating Questionnaire (TFEQ-R18V2),,X,,,,,,X,,,,X,,,,,,,X,,,
+MRI k l,,X,,,,,,X,,,,,,,,,,,X,,,
+Laboratory Assessments,X,X,,X,X,X,,X,,,,X,,,,X,,,X,X,,X
+eGFR,X,X,,,,,,X,,,,,,,,,,,X,,,
+Human biosamples for future researchj,,X,,,X,,,X,,,,,,,,X,,,X,,,
+Antibodies,,X,,X,X,,,X,,,,X,,,,X,,,X,X,,X
+PK Sampling,,,,X,X,,,X,,,,X,,,,X,,,X,X,,X
+Hypoglycaemic Episode,,,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X
+Self Measured Fasting Glucose m,,,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X
+Adverse Event e,,,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X
+Physical Examination,X,,,,,,,,,,,,,,,,,,X,,,
+Diet and Physical Activity Counselling,,X,,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X,,X
+Training in Trial Product,,X,,X,X,X,X,X,,X,,X,,X,,X,,X,,,,
+Hand Out ID Card,X,,,,,,,,,,,,,,,,,,,,,
+Hand Out Home Pregnancy Test g,,X,,X,X,X,X,X,,X,,X,,X,,X,,X,X,,,
+Hand Out and Instruct in Diary,,X,,,,,,,,,,,,,,,,,,,,
+Hand Out and Instruct in BG-meter,,X,,,,,,,,,,,,,,,,,,,,
+Collect Diary,,,,,,,,,,,,,,,,,,,,,,X
+Collect BG Meter,,,,,,,,,,,,,,,,,,,,,,X
+Breast Neoplasm Follow-up f,,,,,,,,,,,,,,,,,,,,,,X
+Colon Neoplasm Follow-up,,,,,,,,,,,,,,,,,,,,,,X
+Evaluation of Antihypertensive Treatment,,,,,,,,,,,,,,,,,,,X,,,
+Evaluation of Lipidlowering Treatment,,,,,,,,,,,,,,,,,,,X,,,
+Drug Dispensing n,,X,,X,X,X,X,X,,X,,X,,X,,X,,X,,,,

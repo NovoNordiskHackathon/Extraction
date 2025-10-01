@@ -128,8 +128,8 @@ def parse_hierarchy(elements):
 
 
 if __name__ == "__main__":
-    input_file = "texttablestructured_protocol3.json"
-    output_file = "hierarchical_output_final3.json"
+    input_file = "texttablestructured_protocol2.json"
+    output_file = "hierarchical_output_final2.json"
 
     with open(input_file, 'r', encoding='utf-8') as f:
         data = json.load(f)

@@ -371,7 +371,7 @@ try:
 
     extracted_forms = extract_forms_with_final_corrections(data)
 
-    output_csv_path = 'extracted_forms_corrected_final.csv'
+    output_csv_path = 'extracted_forms_final.csv'
     with open(output_csv_path, 'w', newline='', encoding='utf-8-sig') as csvfile:
         fieldnames = ["Form Label", "Form Name", "Visits", "Dynamic Trigger", "Trigger Details"]
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)

@@ -1,0 +1,14 @@
+Form Label,Form Name,Source,Is Form Dynamic?,Form Dynamic Criteria,V1,V2,P3,V4,V5,V6,V7,V8,P9,V10,P11,V12,P13,V14,P15,V16,P17,V18,V19,V19A,P20,V21
+MRI Scan Consent,[MRI_CONSENT] Non-repeating,Library,No,,1,,,,,,,,,,,,,,,,,,,,,
+Weight History (Adults),[WEIGHT_HIST] - Non-repeating,Library,No,,2,,,,,,,,,,,,,,,,,,,,,
+Contraception (Baseline),[CONTRACEPTION_BASE] - Non-repeating,Library,Yes,Form to be dynamically triggered from the ‘Childbearing Potential’ form for female subject and should only appear/filled in if the Childbearing potential is answered as YES.,3,,,,,,,,,,,,,,,,,,,,,
+Contraception (Follow-up),[CONTRACEPTION_FU] - Non-repeating,Library,Yes,Form to be dynamically triggered from the ‘Childbearing Potential’ form for female subject and should only appear/filled in if the Childbearing potential is answered as YES.,,1,,1,1,1,1,1,,1,,1,,1,,1,,1,1,1,,
+Hand Grip Test,[HAND_GRIP] -Non repeating form,Library,No,,,2,,,,,,2,,,,,,,,,,,2,,,
+Patient Health Questionnaire - PHQ-9 (PHQ-9),[PHQ9] - Non-repeating,New,No,,4,,,,,2,,3,,,,2,,,,2,,,3,2,,
+C-SSRS Baseline (C-SSRS Baseline),[CSSRS_BASELINE] - Non-repeating,Library,No,,5,,,,,,,,,,,,,,,,,,,,,
+C-SSRS Since Last Visit (C-SSRS Since Last Visit),[CSSRS_SLV] - Non-repeating,Library,No,,,,,,,3,,4,,,,3,,,,3,,,4,3,,
+Collection of Samples for Laboratory,[LAB_SMPL_TKN] – Non-repeating form,Library,No,,6,3,,2,2,4,2,5,,2,,4,,2,,4,,2,5,4,,1
+Collection of Samples for Laboratory,[LAB_SMPL_TKN_1] – Non-repeating form,New,No,,,4,,,,,,6,,,,,,,,,,,6,,,
+Evaluation of Antihypertensive and Lipid-Lowering Treatment,[EVALUATION_2],New,No,,,5,,,,,,,,,,,,,,,,,7,,,
+Collection of Samples for Laboratory (Biosamples),[LAB_SMPL_TKN_2] – Non-repeating form,New,No,,,6,,,3,,,7,,,,,,,,5,,,8,,,
+Unplanned Procedures,[XXXXXXXX] - Repeating,Library,No,,,,,,,,,,,,,,,,,,,,,,,

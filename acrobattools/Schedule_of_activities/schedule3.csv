@@ -1,0 +1,42 @@
+Procedure,V1,S1D-2,SxD-1,SxD1,SxD2,SxD3,SxD8,SxD15,SxD22,S10D-1,S10D1,S10D 2,S10D 3,S10D8,S10D1_1
+Informed Consent,X,,,,,,,,,,,,,,
+Demography d,X,,,,,,,,,,,,,,
+Eligibility Criteria e,X,,X,,,,,,,,,,,,
+Randomisation Criteria f,,,X,,,,,,,,,,,,
+Randomisation f,,,,X,,,,,,,,,,,
+Discontinuation Criteria,,,,X,,,X,X,X,,X,,,X,X
+Medical History/Concomitant Illness g,X,,X,,,,,,,,,,,,
+Concomitant Medication,X,,X,X,X,X,X,X,X,X,X,X,X,X,X
+Screen for Alcohol h,X,,X,,,,,,,X,,,,,
+Screen for Drug h,X,,X,,,,,,,X,,,,,
+"Tobacco, E-cigarette and Nicotine Product Status h",X,,X,,,,,,,,,,,,
+Childbearing Potential,X,,,,,,,,,,,,,,
+Pregnancy Test Serum c,X,,X,,,,,,,X,,,,,
+Contraceptive Counselling,X,,X,,,,,,,X,,,,,
+Body Measurements i,X,,X,,,,X,X,X,X,,,,X,X
+PK Sampling j,,,,X,X,X,X,X,X,,X,X,X,X,X
+Vital Signs j k,X,,X,X,X,X,X,X,X,X,X,X,X,X,X
+25h ABPM l,,,X,,,,,,,,,,,,
+Physical Examination,X,,X,,,,,,,X,,,,,
+Adverse Event g,,,,X,X,X,X,X,X,X,X,X,X,X,X
+AE Requiring Additional Data m,,,,X,X,X,X,X,X,X,X,X,X,X,X
+ECG j n,X,,X,X,X,X,X,X,X,X,X,X,X,X,X
+Anti-NNC0662-0419 Antibodies o,X,,,,,,,,,,,,,,
+PD Laboratory Assessments p,X,,X,,,,,,,X,,,,,
+Safety Laboratory Assessments p,X,,X,X,X,X,X,,,X,X,X,X,X,
+Urinalysis,X,,X,,,X,,,,X,,,X,,
+eGFR from Creatinine-Cystatin C 2021 CKDEPI Formula,X,,X,,,X,,,,X,,,X,,
+Biosamples for Future Research q,,,X,,,,,,,,,,,,
+Patient Health Questionnaire (PHQ-9) r,X,,X,,,,,,,,,,,,
+C-SSRS Baseline,X,,,,,,,,,,,,,,
+C-SSRS Since Last Visit s,,,X,,,,,,,,,,,,
+Control of Eating Questionnaire (CoEQ) t,,,X,,,,,,,,,,,,
+Eating Drivers Diary (EDDY) t,,,X,,,,,,,,,,,,
+Patient Global Impression of Status (PGIS) - Eating Drivers t,,,X,,,,,,,,,,,,
+Patient Global Impression of Change (PGI-C) - Eating Drivers t,,,X,,,,,,,,,,,,
+Instruct in eCOA device,X,,,,,,,,,,,,,,
+Drug Dispensing,,,,X,,,X,X,X,,X,,,X,X
+Administration of Trial Product,,,,X,,,X,X,X,,X,,,X,X
+Attend Visit Fasting,X,,X,,,,,,,X,,,,,
+Hand Out ID Card,X,,,,,,,,,,,,,,
+Check-in day,,X,,,,,,,,,,,,,

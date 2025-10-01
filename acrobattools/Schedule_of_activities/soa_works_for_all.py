@@ -327,7 +327,7 @@ def parse_protocol_schedule(protocol_data):
     return schedule, visit_order, procedure_order
 
 
-def save_schedule_to_csv(schedule, visit_order, procedure_order, output_path="schedule_fixed.csv"):
+def save_schedule_to_csv(schedule, visit_order, procedure_order, output_path="schedule3.csv"):
     if not schedule:
         print("❌ Schedule is empty, not saving CSV.")
         return
@@ -352,7 +352,7 @@ def save_schedule_to_csv(schedule, visit_order, procedure_order, output_path="sc
 # -----------------------
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        file_path = "/home/ibab/PycharmProjects/Extraction/acrobattools/structuring_protocol_json/hierarchical_output_final3.json"
+        file_path = "../structuring_protocol_json/hierarchical_output_final3.json"
     else:
         file_path = sys.argv[1]
 
