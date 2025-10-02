@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
+  <title>PTD Generator</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-container">
+      <h1 class="logo">PTD Generator</h1>
+      <button id="themeToggle" class="button secondary" aria-label="Toggle theme">
+        <span class="button-icon" aria-hidden="true">🌙</span>
+        <span class="button-text">Theme</span>
+      </button>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="container hero-content">
+      <h2 class="hero-title">Generate Your PTD File</h2>
+      <p class="hero-subtitle">Upload your Protocol and CRF documents to automatically build your Protocol Translation Document (PTD).</p>
+    </div>
+    <div class="hero-ornament" aria-hidden="true"></div>
+  </section>
+
+  <main class="container main-grid">
+    <section class="card upload-card">
+      <h3 class="card-title">Upload Documents</h3>
+      <div class="upload-grid">
+        <div id="protocolDropzone" class="dropzone" tabindex="0" role="button" aria-label="Upload Protocol document">
+          <div class="dropzone-icon" aria-hidden="true">📄</div>
+          <div class="dropzone-text">
+            <strong>Protocol Document</strong>
+            <span class="hint">Drag & drop or</span>
+            <button type="button" class="link-button browse-button" data-input="protocolFile">Browse</button>
+          </div>
+          <input type="file" id="protocolFile" class="file-input" accept=".pdf,.doc,.docx,.txt,.xlsx" />
+        </div>
+
+        <div id="crfDropzone" class="dropzone" tabindex="0" role="button" aria-label="Upload CRF document">
+          <div class="dropzone-icon" aria-hidden="true">🗂️</div>
+          <div class="dropzone-text">
+            <strong>CRF Document</strong>
+            <span class="hint">Drag & drop or</span>
+            <button type="button" class="link-button browse-button" data-input="crfFile">Browse</button>
+          </div>
+          <input type="file" id="crfFile" class="file-input" accept=".pdf,.doc,.docx,.txt,.xlsx" />
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="generateButton" class="button primary" disabled>Generate PTD</button>
+      </div>
+
+      <div id="progressContainer" class="progress hidden" aria-live="polite">
+        <div id="progressBar" class="progress-bar" style="width: 0%"></div>
+        <span id="progressLabel" class="progress-label">Preparing…</span>
+      </div>
+    </section>
+
+    <section id="outputSection" class="card output-section hidden" aria-live="polite">
+      <h4 class="card-title">PTD generated</h4>
+      <p>Your PTD file is ready.</p>
+      <a id="downloadLink" class="button success" href="#" download="PTD_Template.xlsx">Download PTD</a>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>© 2025 PTD Generator</p>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
