@@ -127,12 +127,18 @@ def parse_hierarchy(elements):
     return root
 
 
-def run_hierarchy(input_file, output_file="hierarchical_output_final2.json"):
+def run_hierarchy(input_file, output_file=None):
     with open(input_file, 'r', encoding='utf-8') as f:
         data = json.load(f)
 
     elements = data.get('elements', []) if isinstance(data, dict) else []
     hierarchy = parse_hierarchy(elements)
+
+      # If output_file is None, create from input_file by inserting '_output' before extension
+    if output_file is None:
+        base, ext = os.path.splitext(input_file)
+        output_file = f"{base}_output{ext}"
+
 
     with open(output_file, 'w', encoding='utf-8') as f:
         json.dump(hierarchy, f, indent=2)
