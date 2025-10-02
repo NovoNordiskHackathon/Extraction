@@ -956,9 +956,9 @@ def assign_item_order(items):
 # UPDATED MAIN PROCESSING FUNCTION WITH SIMPLE ITEM ORDER
 # ==============================================================================
 
-def process_clinical_forms(json_file_path, template_csv_path, output_csv_path):
+def process_clinical_forms(json_file_path, template_csv_path="template.xlsx", output_csv_path="Study_Specific_Form.xlsx"):
     """Main function to process JSON and create the item-based CSV with repeating logic and item order."""
-    template_df = pd.read_csv(template_csv_path)
+    template_df = pd.read_excel(template_csv_path)
     print("✅ Template CSV loaded successfully")
 
     with open(json_file_path, "r", encoding="utf-8") as file:
@@ -1105,7 +1105,7 @@ if __name__ == "__main__":
         print("=" * 80)
         print("CLINICAL FORMS PROCESSING - WITH SEQUENTIAL ITEM ORDER (1, 2, 3...)")
         print("=" * 80)
-        process_clinical_forms(json_file, template_file, output_file)
+        process_clinical_forms(json_file, template_csv_path="template.xlsx", output_csv_path="Study_Specific_Form.xlsx")
         print("\n🎯 PROCESSING COMPLETE!")
         print("✅ Key features of this version:")
         print("   1. ✅ Correctly handles items in <TH> + <TD> row structures.")
