@@ -485,6 +485,8 @@ def extract_items_from_form(form_node):
                 if is_instruction(question_text):
                     print(f"    ⚠️  Skipping instruction row (3-col): '{question_text}'")
                     continue
+
+
                 # 🔥 NEW: Check if option_cell contains valid option content
                 # Skip rows where the option cell has metadata like "C, CO"
                 if not is_valid_option_content(option_cell):
@@ -499,6 +501,8 @@ def extract_items_from_form(form_node):
                 # elif th_text and len(th_text) <= 10:  # Short prefix (like a number or code)
                 #     # Prepend the prefix
                 #     question_text = f"{th_text} {question_text}"
+
+
 
                 # Add this item (third column becomes the option node)
                 items_data.append({
@@ -584,7 +588,7 @@ def determine_data_type(option_td_node, codelist_content):
 
     # 🔥 LOGIC 1: Check for Date/Time pattern in codelist content
     # Pattern: Req/Req/Req(YYYY-YYYY) or similar date range patterns
-    date_time_pattern = r'Req.*?\(\d{4}-\d{4}\)'
+    date_time_pattern = r'Req.*?\(\d{4}[-–—/]{1,2}\d{4}\)'
     if re.search(date_time_pattern, codelist_content, re.IGNORECASE):
         return "Date/Time"
 
@@ -783,19 +787,26 @@ def check_query_future_date(data_type):
     return ""
 
 
-def check_required_field(item_name):
+def check_required_field(item_name, sibling_cells=None, current_cell_index=None):
     """
-    Check if item is required by looking for asterisk (*) at the beginning.
+    Check if item is required by:
+    - Looking for asterisk (*) at the start of item_name.
+    - Also checking for '*' in the previous cell's text (direct sibling cell before the current cell).
+
+    Parameters:
+    - item_name: text of current item label
+    - sibling_cells: list of TD/TH nodes (cells) in the row
+    - current_cell_index: index of the cell with item_name in sibling_cells
     """
-    if not item_name:
+    if not item_name and sibling_cells is None:
         return "N"
 
-    # Check if item name starts with * (after stripping whitespace)
-    item_text = str(item_name).strip()
+    item_text = str(item_name).strip() if item_name else ""
+
     if item_text.startswith('*'):
         return "Y"
-
     return "N"
+
 
 
 
@@ -1029,9 +1040,9 @@ def process_clinical_forms(json_file_path, template_csv_path, output_csv_path):
 
 
 if __name__ == "__main__":
-    json_file = "hierarchical_1234_ Technical_Design_Sample_eCRF_Req.json"
+    json_file = "hierarchical_output_final.json"
     template_file = "template_first4rows.csv"
-    output_file = "test1234.csv"
+    output_file = "final_first_mockcrf.csv"
 
     try:
         print("=" * 80)
