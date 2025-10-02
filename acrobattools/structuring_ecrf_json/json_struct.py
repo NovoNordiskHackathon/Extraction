@@ -127,10 +127,7 @@ def parse_hierarchy(elements):
     return root
 
 
-if __name__ == "__main__":
-    input_file = "texttablestructured_ecrf3.json"
-    output_file = "hierarchical_output_final3.json"
-
+def run_hierarchy(input_file, output_file="hierarchical_output_final2.json"):
     with open(input_file, 'r', encoding='utf-8') as f:
         data = json.load(f)
 
@@ -141,3 +138,8 @@ if __name__ == "__main__":
         json.dump(hierarchy, f, indent=2)
 
     print(f"✅ Fixed table placement hierarchy saved to {output_file}")
+
+if __name__ == "__main__":
+    import sys
+    input_file = sys.argv[1] if len(sys.argv) > 1 else "texttablestructured_protocol2.json"
+    run_hierarchy(input_file)
