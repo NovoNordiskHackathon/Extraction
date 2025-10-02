@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="light" data-mode="auto" data-accent="violet">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -12,10 +12,30 @@
   <header class="site-header">
     <div class="container header-container">
       <h1 class="logo">PTD Generator</h1>
-      <button id="themeToggle" class="button secondary" aria-label="Toggle theme">
-        <span class="button-icon" aria-hidden="true">🌙</span>
-        <span class="button-text">Theme</span>
-      </button>
+      <div class="header-controls">
+        <div class="theme-segment" role="tablist" aria-label="Theme">
+          <button class="seg" data-mode="auto" id="modeAuto" aria-selected="true" title="Follow system">
+            <span class="seg-icon" aria-hidden="true">🖥️</span>
+            <span class="seg-label">Auto</span>
+          </button>
+          <button class="seg" data-mode="light" id="modeLight" title="Light">
+            <span class="seg-icon" aria-hidden="true">☀️</span>
+            <span class="seg-label">Light</span>
+          </button>
+          <button class="seg" data-mode="dark" id="modeDark" title="Dark">
+            <span class="seg-icon" aria-hidden="true">🌙</span>
+            <span class="seg-label">Dark</span>
+          </button>
+        </div>
+        <div class="accent-swatches" role="radiogroup" aria-label="Accent">
+          <button class="swatch" data-accent="violet" aria-label="Violet" title="Violet"></button>
+          <button class="swatch" data-accent="indigo" aria-label="Indigo" title="Indigo"></button>
+          <button class="swatch" data-accent="cyan" aria-label="Cyan" title="Cyan"></button>
+          <button class="swatch" data-accent="emerald" aria-label="Emerald" title="Emerald"></button>
+          <button class="swatch" data-accent="amber" aria-label="Amber" title="Amber"></button>
+          <button class="swatch" data-accent="rose" aria-label="Rose" title="Rose"></button>
+        </div>
+      </div>
     </div>
   </header>
 
@@ -28,6 +48,24 @@
   </section>
 
   <main class="container main-grid">
+    <section class="features">
+      <article class="feature-card">
+        <div class="feature-icon" aria-hidden="true">⚡</div>
+        <h3 class="feature-title">Fast processing</h3>
+        <p class="feature-desc">Optimized flow with clear progress and feedback.</p>
+      </article>
+      <article class="feature-card">
+        <div class="feature-icon" aria-hidden="true">🔒</div>
+        <h3 class="feature-title">Private by design</h3>
+        <p class="feature-desc">Files stay local to your browser in this demo.</p>
+      </article>
+      <article class="feature-card">
+        <div class="feature-icon" aria-hidden="true">🎨</div>
+        <h3 class="feature-title">Customizable</h3>
+        <p class="feature-desc">Pick an accent and theme that fits your brand.</p>
+      </article>
+    </section>
+
     <section class="card upload-card">
       <h3 class="card-title">Upload Documents</h3>
       <div class="upload-grid">
@@ -40,6 +78,7 @@
           </div>
           <input type="file" id="protocolFile" class="file-input" accept=".pdf,.doc,.docx,.txt,.xlsx" />
         </div>
+        <div class="chip-row" id="protocolChip" aria-live="polite"></div>
 
         <div id="crfDropzone" class="dropzone" tabindex="0" role="button" aria-label="Upload CRF document">
           <div class="dropzone-icon" aria-hidden="true">🗂️</div>
@@ -50,6 +89,7 @@
           </div>
           <input type="file" id="crfFile" class="file-input" accept=".pdf,.doc,.docx,.txt,.xlsx" />
         </div>
+        <div class="chip-row" id="crfChip" aria-live="polite"></div>
       </div>
 
       <div class="actions">
@@ -57,7 +97,7 @@
       </div>
 
       <div id="progressContainer" class="progress hidden" aria-live="polite">
-        <div id="progressBar" class="progress-bar" style="width: 0%"></div>
+        <div id="progressBar" class="progress-bar stripes" style="width: 0%"></div>
         <span id="progressLabel" class="progress-label">Preparing…</span>
       </div>
     </section>
@@ -74,6 +114,8 @@
       <p>© 2025 PTD Generator</p>
     </div>
   </footer>
+
+  <div id="toastContainer" class="toast-container" aria-live="polite" aria-atomic="true"></div>
 
   <script src="script.js"></script>
 </body>
